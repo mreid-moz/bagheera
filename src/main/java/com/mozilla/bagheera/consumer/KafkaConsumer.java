@@ -77,6 +77,7 @@ public class KafkaConsumer implements Consumer {
     
     protected Meter consumed;
     protected Meter invalidMessageMeter;
+    protected Meter skippedMessageMeter;
     
     public KafkaConsumer(String topic, Properties props) {
         this(topic, props, DEFAULT_NUM_THREADS);
@@ -93,6 +94,7 @@ public class KafkaConsumer implements Consumer {
         
         consumed = Metrics.newMeter(new MetricName("bagheera", "consumer", topic + ".consumed"), "messages", TimeUnit.SECONDS);
         invalidMessageMeter = Metrics.newMeter(new MetricName("bagheera", "consumer", topic + ".invalid"), "messages", TimeUnit.SECONDS);
+        skippedMessageMeter = Metrics.newMeter(new MetricName("bagheera", "consumer", topic + ".skipped"), "messages", TimeUnit.SECONDS);
     }
 
     public void setSinkFactory(KeyValueSinkFactory sinkFactory) {
@@ -156,11 +158,7 @@ public class KafkaConsumer implements Consumer {
                                 bmsg.hasId() && bmsg.hasPayload()) {
                                 if (validationPipeline == null ||
                                     validationPipeline.isValid(bmsg.getPayload().toByteArray())) {
-                                    if (bmsg.hasTimestamp()) {
-                                        sink.store(bmsg.getId(), bmsg.getPayload().toByteArray(), bmsg.getTimestamp());
-                                    } else {
-                                        sink.store(bmsg.getId(), bmsg.getPayload().toByteArray());
-                                    }
+                                    sink.store(bmsg);
                                 } else {
                                     invalidMessageMeter.mark();
                                     // TODO: sample out an example payload
@@ -168,7 +166,11 @@ public class KafkaConsumer implements Consumer {
                                 }
                             } else if (bmsg.getOperation() == Operation.DELETE &&
                                 bmsg.hasId()) {
-                                sink.delete(bmsg.getId());
+                                sink.delete(bmsg);
+                            } else {
+                                // Neither a create_update nor a delete.  Skip it.
+                                LOG.warn("Skipping message with unknown operation or weird data.");
+                                skippedMessageMeter.mark();
                             }
                             consumed.mark();            
                         }
@@ -179,7 +181,7 @@ public class KafkaConsumer implements Consumer {
                     } catch (IOException e) {
                         LOG.error("IO error while storing to data sink", e);
                     } finally {
-                    	latch.countDown();
+                        latch.countDown();
                     }
                     
                     return null;

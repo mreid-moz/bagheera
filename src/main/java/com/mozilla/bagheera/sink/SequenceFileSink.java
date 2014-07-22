@@ -47,7 +47,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 
-public class SequenceFileSink implements KeyValueSink {
+public class SequenceFileSink extends BaseSink {
     private static final Logger LOG = Logger.getLogger(SequenceFileSink.class);
     private ObjectMapper jsonMapper = new ObjectMapper();
 
@@ -249,5 +249,4 @@ public class SequenceFileSink implements KeyValueSink {
         // TODO: Throw error or just ignore?
         // NOOP
     }
-
 }

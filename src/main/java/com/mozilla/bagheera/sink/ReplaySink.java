@@ -33,7 +33,7 @@ import org.apache.log4j.Logger;
 // TODO: should we queue up deletes and combine them with "store" requests using the "X-Obsolete-Doc" header?
 // TODO: create placeholders for API version, partitions, etc.
 
-public class ReplaySink implements Sink, KeyValueSink {
+public class ReplaySink extends BaseSink {
 
     public static final String KEY_PLACEHOLDER = "%k";
 

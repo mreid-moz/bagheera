@@ -19,17 +19,34 @@
  */
 package com.mozilla.bagheera.sink;
 
-import java.io.Closeable;
 import java.io.IOException;
+import java.util.UUID;
 
 import com.mozilla.bagheera.BagheeraProto.BagheeraMessage;
+import com.mozilla.bagheera.BagheeraProto.BagheeraMessage.Operation;
 
-public interface KeyValueSink extends Closeable {
+public abstract class BaseSink implements Sink, KeyValueSink {
 
-    public void store(BagheeraMessage message) throws IOException;
-    public void store(String key, byte[] data) throws IOException;
-    public void store(String key, byte[] data, long timestamp) throws IOException;
-    public void delete(BagheeraMessage message) throws IOException;
-    public void delete(String key) throws IOException;
-    
+	@Override
+	public void store(BagheeraMessage bmsg) throws IOException {
+        if (bmsg.hasTimestamp()) {
+            this.store(bmsg.getId(), bmsg.getPayload().toByteArray(), bmsg.getTimestamp());
+        } else {
+            this.store(bmsg.getId(), bmsg.getPayload().toByteArray());
+        }
+	}
+
+	@Override
+	public void delete(BagheeraMessage bmsg) throws IOException {
+		// Assume we're only getting valid messages.
+		if (bmsg.getOperation() == Operation.CREATE_UPDATE) {
+            this.delete(bmsg.getId());
+		}
+	}
+
+	@Override
+	public void store(byte[] data) throws IOException {
+		// Assign a key.
+		this.store(UUID.randomUUID().toString(), data);
+	}
 }

@@ -45,7 +45,7 @@ import com.yammer.metrics.core.MetricName;
 import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.core.TimerContext;
 
-public class HBaseSink implements KeyValueSink {
+public class HBaseSink extends BaseSink {
 
     private static final Logger LOG = Logger.getLogger(HBaseSink.class);
 

@@ -23,7 +23,9 @@ import java.io.IOException;
 
 import org.apache.log4j.Logger;
 
-public class LoggerSink implements Sink, KeyValueSink {
+import com.mozilla.bagheera.BagheeraProto.BagheeraMessage;
+
+public class LoggerSink extends BaseSink {
 
     private static final Logger LOG = Logger.getLogger(LoggerSink.class);
 
@@ -82,5 +84,4 @@ public class LoggerSink implements Sink, KeyValueSink {
             LOG.info("delete(k) key: " + key);
         }
     }
-
 }
