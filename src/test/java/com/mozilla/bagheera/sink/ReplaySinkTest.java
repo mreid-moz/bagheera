@@ -82,6 +82,7 @@ public class ReplaySinkTest {
 
         // Without sampling, we should see all requests.
         assertEquals(max, counter);
+        sink.close();
     }
 
     @Test
@@ -111,6 +112,7 @@ public class ReplaySinkTest {
         // With sampling, we should see some requests, but not all of them.
         assertTrue(counter > 0);
         assertTrue(counter < max);
+        sink.close();
     }
 
     @Test
@@ -121,6 +123,7 @@ public class ReplaySinkTest {
         assertEquals("http://localhost:8080/submit/foof/test1", sink.getDest("test1"));
         assertEquals("http://localhost:8080/submit/foof/test2", sink.getDest("test2"));
         assertEquals("http://localhost:8080/submit/foof/a/b/c", sink.getDest("a/b/c"));
+        sink.close();
     }
 
     @Test
@@ -131,6 +134,7 @@ public class ReplaySinkTest {
         assertEquals("I am a test", sink.getDest("test1"));
         assertEquals("I am a test", sink.getDest("test2"));
         assertEquals("I am a test", sink.getDest("a/b/c"));
+        sink.close();
     }
 
     // FIXME We can't use the KeyValueSinkFactory because it gets stuck with the original config :(
@@ -152,6 +156,7 @@ public class ReplaySinkTest {
         assertEquals("foo test1 bar", sink.getDest("test1"));
         assertEquals("foo test2 bar", sink.getDest("test2"));
         assertEquals("foo a/b/c bar", sink.getDest("a/b/c"));
+        sink.close();
     }
 
     @Test
@@ -172,6 +177,7 @@ public class ReplaySinkTest {
 
         // Without sampling, we should see all delete requests.
         assertEquals(max, counter);
+        sink.close();
     }
 
     @Test
@@ -198,6 +204,7 @@ public class ReplaySinkTest {
 
         // Without sampling, we should see all delete requests.
         assertEquals(0, counter);
+        sink.close();
     }
 
     class MyHandler implements HttpHandler {

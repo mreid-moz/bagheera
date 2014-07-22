@@ -81,6 +81,7 @@ public class BagheeraTest {
         assertEquals(BagheeraMessage.Operation.CREATE_UPDATE, message.getOperation());
         assertEquals("", message.getApiVersion());
         assertEquals(0, message.getPartitionCount());
+        sink.close();
     }
 
     @Test
@@ -105,7 +106,7 @@ public class BagheeraTest {
         assertEquals(2, message.getPartitionCount());
         assertEquals("partition1", message.getPartition(0));
         assertEquals("partition2", message.getPartition(1));
-
+        sink.close();
     }
 
     @Test
@@ -130,7 +131,7 @@ public class BagheeraTest {
         assertEquals(2, message.getPartitionCount());
         assertEquals("partition1", message.getPartition(0));
         assertEquals("partition2", message.getPartition(1));
-
+        sink.close();
     }
 
     @Test
@@ -156,6 +157,7 @@ public class BagheeraTest {
         assertEquals("partition2", message.getPartition(1));
 
         assertEquals("5.5", message.getApiVersion());
+        sink.close();
     }
 
     @After
