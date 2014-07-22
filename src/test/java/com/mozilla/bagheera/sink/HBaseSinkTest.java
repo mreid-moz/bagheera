@@ -25,7 +25,6 @@ import java.util.Date;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.apache.commons.cli.ParseException;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.Put;

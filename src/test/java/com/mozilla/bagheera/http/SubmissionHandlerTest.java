@@ -38,7 +38,7 @@ public class SubmissionHandlerTest {
 
     @Test
     public void testSetFields() throws Exception {
-        SubmissionHandler handler = new SubmissionHandler(null, null, null, null);
+//        SubmissionHandler handler = new SubmissionHandler(null, null, null, null);
         BagheeraMessage.Builder builder = BagheeraMessage.newBuilder();
         BagheeraMessage before = builder.buildPartial();
 
@@ -51,7 +51,6 @@ public class SubmissionHandlerTest {
         String expectedNamespace = "test";
         String expectedApiVersion = "2.5";
         String expectedId = "hello there";
-        long expectedTimestamp = System.currentTimeMillis();
         List<String> expectedPartitions = new ArrayList<String>();
 
         BagheeraHttpRequest request = Mockito.mock(BagheeraHttpRequest.class);
