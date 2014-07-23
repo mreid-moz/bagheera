@@ -67,8 +67,10 @@ public class KeyValueSinkFactory implements Closeable {
         }
         
         if (!sinkMap.containsKey(namespace)) {
+            LOG.info("Getting a sink for " + namespace);
             sinkConfiguration.setString("namespace", namespace);
             KeyValueSink sink;
+            boolean foundSuitableConstructor = false;
             for (Constructor<?> constructor : sinkClazz.getConstructors()) {
                 Class<?>[] paramTypes = constructor.getParameterTypes();
                 if (KeyValueSink.class.isAssignableFrom(sinkClazz) && 
@@ -76,10 +78,15 @@ public class KeyValueSinkFactory implements Closeable {
                     try {
                         sink = (KeyValueSink)constructor.newInstance(sinkConfiguration);
                         sinkMap.put(namespace, sink);
+                        foundSuitableConstructor = true;
+                        break;
                     } catch (Exception e) {
                         LOG.error("Error constructing new instance of sink class for namespace: " + namespace, e);
                     }
                 }
+            }
+            if (!foundSuitableConstructor) {
+                LOG.error("Did not find a suitable constructor for sink class " + sinkClazz.getName());
             }
         }
         return sinkMap.get(namespace);
