@@ -68,7 +68,7 @@ public final class S3BatchConsumer extends App {
                 sinkConfig.setInt("hbasesink.hbase.numthreads", Integer.parseInt(cmd.getOptionValue("numthreads")));
             }
             sinkConfig.setString("s3batchsink.bucket", cmd.getOptionValue("bucket", "mreid-fhr-incoming"));
-            sinkConfig.setString("s3batchsink.size", cmd.getOptionValue("sample", "500000000"));
+            sinkConfig.setString("s3batchsink.size", cmd.getOptionValue("size", "500000000"));
             sinkConfig.setString("s3batchsink.compress", cmd.getOptionValue("compress-payloads", "false"));
             KeyValueSinkFactory sinkFactory = KeyValueSinkFactory.getInstance(S3BatchSink.class, sinkConfig);
             sh.addLast(sinkFactory);
