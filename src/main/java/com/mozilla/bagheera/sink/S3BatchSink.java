@@ -41,6 +41,12 @@ public class S3BatchSink extends BaseSink {
 
     StringBuilder builder = new StringBuilder(1024);
 
+    public S3BatchSink(SinkConfiguration sinkConfiguration) throws IOException {
+        this(sinkConfiguration.getString("s3batchsink.bucket"),
+                sinkConfiguration.getLong("s3batchsink.size"),
+                sinkConfiguration.getBoolean("s3batchsink.compress"));
+    }
+
     public S3BatchSink(String s3Bucket, Long batchSize, Boolean useCompression) throws IOException {
         this.compress = useCompression;
         this.bucket = s3Bucket;
@@ -67,19 +73,6 @@ public class S3BatchSink extends BaseSink {
         }
 
         byte[] path = builder.toString().getBytes();
-
-        if (this.compress) {
-            ByteArrayOutputStream gzBytes = new ByteArrayOutputStream(data.length);
-            try {
-                GZIPOutputStream gzStream = new GZIPOutputStream(gzBytes);
-                gzStream.write(data);
-                gzStream.close();
-            } finally {
-                gzBytes.close();
-            }
-            data = gzBytes.toByteArray();
-        }
-        
         byte[] ip = message.getIpAddr().toByteArray();
         return writeRecord(ip, path, data, message.getTimestamp(), this.outputStream);
     }
@@ -100,6 +93,17 @@ public class S3BatchSink extends BaseSink {
     }
     
     public long writeRecord(byte[] ip, byte[] path, byte[] data, long timestamp, OutputStream outputStream) throws IOException {
+        if (this.compress) {
+            ByteArrayOutputStream gzBytes = new ByteArrayOutputStream(data.length);
+            try {
+                GZIPOutputStream gzStream = new GZIPOutputStream(gzBytes);
+                gzStream.write(data);
+                gzStream.close();
+            } finally {
+                gzBytes.close();
+            }
+            data = gzBytes.toByteArray();
+        }
     	// write out:
 	    // Write record separator
 	    writeUInt8(0x1e, outputStream);
