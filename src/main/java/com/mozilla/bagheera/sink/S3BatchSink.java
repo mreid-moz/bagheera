@@ -70,7 +70,7 @@ public class S3BatchSink extends BaseSink {
         this.compress = useCompression;
         this.bucket = s3Bucket;
         this.outputStream = new BufferedOutputStream(new FileOutputStream(new File(getLogFilename())));
-        TransferManager manager = new TransferManager(new ProfileCredentialsProvider());
+        TransferManager manager = S3Loader.getManager();
         loader = new S3Loader(s3queue, manager, this.bucket);
         loaderThread = new Thread(loader);
         loaderThread.start();
