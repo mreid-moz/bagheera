@@ -97,6 +97,7 @@ public class S3Loader implements Runnable {
         LOG.info("Preparing to upload " + filename + " as " + keyName);
         // TransferManager processes all transfers asynchronously,
         // so this call will return immediately.
+        long start = System.currentTimeMillis();
         Upload upload = manager.upload(this.bucket, keyName, file);
 
         boolean success = false;
@@ -104,7 +105,9 @@ public class S3Loader implements Runnable {
             LOG.info("Waiting for upload to complete...");
             // Block and wait for the upload to finish
             upload.waitForCompletion();
-            LOG.info("Upload complete.");
+            double duration = (System.currentTimeMillis() - start) / 1000.0;
+            double mbps = (file.length() / 1024.0 / 1024.0) / duration;
+            LOG.info(String.format("Upload complete in %.02f seconds (%.02f MB/s).", duration, mbps));
             if (delete) {
                 LOG.info("Deleting file.");
                 if (file.delete()) {
