@@ -19,9 +19,6 @@ package com.mozilla.bagheera.consumer;
  * limitations under the License.
  */
 
-
-import java.io.IOException;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -49,6 +46,7 @@ public final class S3BatchConsumer extends App {
         Options options = KafkaConsumer.getOptions();
         options.addOption(optFactory.create("b", "bucket", true, "S3 bucket name").required());
         options.addOption(optFactory.create("s", "size", true, "Batch size in bytes"));
+        options.addOption(optFactory.create("p", "path", true, "Path in which to store batched files"));
         // TODO: AWS credentials?
         options.addOption(optFactory.create("z", "compress-payloads", true, "Whether or not to gzip payload data"));
 
@@ -69,6 +67,7 @@ public final class S3BatchConsumer extends App {
             }
             sinkConfig.setString("s3batchsink.bucket", cmd.getOptionValue("bucket", "mreid-fhr-incoming"));
             sinkConfig.setString("s3batchsink.size", cmd.getOptionValue("size", "500000000"));
+            sinkConfig.setString("s3batchsink.path", cmd.getOptionValue("path", "~/fhr_s3export/log/"));
             sinkConfig.setString("s3batchsink.compress", cmd.getOptionValue("compress-payloads", "false"));
             KeyValueSinkFactory sinkFactory = KeyValueSinkFactory.getInstance(S3BatchSink.class, sinkConfig);
             sh.addLast(sinkFactory);
