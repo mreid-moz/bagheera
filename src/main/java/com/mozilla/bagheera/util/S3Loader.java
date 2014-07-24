@@ -20,14 +20,26 @@
 package com.mozilla.bagheera.util;
 
 import java.io.File;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.apache.log4j.Logger;
 
 import com.amazonaws.AmazonClientException;
+import com.amazonaws.ClientConfiguration;
+import com.amazonaws.auth.profile.ProfileCredentialsProvider;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.internal.Constants;
 import com.amazonaws.services.s3.transfer.TransferManager;
+import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
 import com.amazonaws.services.s3.transfer.Upload;
+import com.mozilla.bagheera.cli.OptionFactory;
 
 public class S3Loader implements Runnable {
     private final BlockingQueue<String> pendingUploads;
@@ -59,8 +71,9 @@ public class S3Loader implements Runnable {
             try {
                 String currentFile = pendingUploads.poll(3, TimeUnit.SECONDS);
                 if (currentFile != null) {
+                    // TODO: use AWS builtin retry?
                     for (int i = 1; i <= retryCount; i++) {
-                        if (upload(currentFile)) {
+                        if (upload(currentFile, true)) {
                             break;
                         } else {
                             if (i == retryCount) {
@@ -77,7 +90,7 @@ public class S3Loader implements Runnable {
         }
     }
 
-    public boolean upload(String filename) throws InterruptedException {
+    public boolean upload(String filename, boolean delete) throws InterruptedException {
         File file = new File(filename);
         String keyName = file.getName();
 
@@ -89,18 +102,79 @@ public class S3Loader implements Runnable {
         boolean success = false;
         try {
             LOG.info("Waiting for upload to complete...");
-            // Or you can block and wait for the upload to finish
+            // Block and wait for the upload to finish
             upload.waitForCompletion();
-            LOG.info("Upload complete. Deleting file.");
-            if (file.delete()) {
-                LOG.info("File deleted successfully");
-            } else {
-                LOG.info("Failed to delete " + filename);
+            LOG.info("Upload complete.");
+            if (delete) {
+                LOG.info("Deleting file.");
+                if (file.delete()) {
+                    LOG.info("File deleted successfully");
+                } else {
+                    LOG.info("Failed to delete " + filename);
+                }
             }
             success = true;
         } catch (AmazonClientException e) {
             LOG.error("Unable to upload file " + filename + ", upload was aborted.", e);
         }
         return success;
+    }
+
+    public static TransferManager getManager() {
+        ClientConfiguration config = new ClientConfiguration();
+        String proxyHost = System.getProperty("http.proxyHost");
+        if (proxyHost != null) {
+            LOG.info("Setting proxy host: " + proxyHost);
+            config.setProxyHost(proxyHost);
+        }
+        String proxyPort = System.getProperty("http.proxyPort");
+        if (proxyPort != null) {
+            LOG.info("Setting proxy port: " + proxyPort);
+            config.setProxyPort(Integer.parseInt(proxyPort));
+        }
+        config.setMaxConnections(50);
+        config.setMaxErrorRetry(5);
+//        config.setConnectionTimeout(10);
+//        config.setSocketTimeout(10);
+//        TransferManagerConfiguration managerConfig = new TransferManagerConfiguration();
+//        // Sets the minimum part size for upload parts.
+//        managerConfig.setMinimumUploadPartSize(5 * Constants.MB);
+//        // Sets the size threshold in bytes for when to use multipart uploads.
+//        managerConfig.setMultipartUploadThreshold(10 * Constants.MB);
+
+        AmazonS3Client awsClient = new AmazonS3Client(new ProfileCredentialsProvider(), config);
+
+        TransferManager manager = new TransferManager(awsClient);
+//        manager.setConfiguration(managerConfig);
+        return manager;
+    }
+
+    public static void main(String[] args) throws ParseException {
+        OptionFactory optFactory = OptionFactory.getInstance();
+        Options options = new Options();
+        options.addOption(optFactory.create("b", "bucket", true, "S3 bucket name").required());
+        options.addOption(optFactory.create("f", "file", true, "File name").required());
+        options.addOption(optFactory.create("d", "delete", false, "Delete file after successful upload?"));
+        CommandLineParser parser = new GnuParser();
+        CommandLine cmd = parser.parse(options, args);
+
+        String bucket = cmd.getOptionValue("bucket");
+        String file = cmd.getOptionValue("file");
+        boolean del = cmd.hasOption("delete");
+        TransferManager manager = S3Loader.getManager();
+
+        BlockingQueue<String> q = new ArrayBlockingQueue<String>(50);
+        S3Loader loader = new S3Loader(q, manager, bucket);
+        LOG.info("Preparing to upload");
+        try {
+            if (loader.upload(file, del)) {
+                LOG.info("Successfully uploaded " + file);
+            } else {
+                LOG.error("Failed to upload " + file);
+            }
+        } catch (InterruptedException e) {
+            LOG.error("Error uploading " + file, e);
+        }
+        manager.shutdownNow();
     }
 }
