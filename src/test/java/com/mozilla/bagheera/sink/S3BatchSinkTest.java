@@ -34,7 +34,7 @@ public class S3BatchSinkTest {
 
     @Test
     public void testWriteRecord() throws IOException{
-        S3BatchSink sink = new S3BatchSink("test", 100l, false);
+        S3BatchSink sink = new S3BatchSink("test", ".", 100l, false);
 
         byte[] ip = "123.123.123.123".getBytes();
         byte[] path = "/submit/test".getBytes();
@@ -67,7 +67,7 @@ public class S3BatchSinkTest {
 
     @Test
     public void testWriteRecordCompressed() throws IOException{
-        S3BatchSink sink = new S3BatchSink("test", 100l, true);
+        S3BatchSink sink = new S3BatchSink("test", ".", 100l, true);
 
         byte[] ip = "123.123.123.123".getBytes();
         byte[] path = "/submit/test".getBytes();
