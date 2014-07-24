@@ -28,6 +28,8 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.locks.Lock;
@@ -44,6 +46,7 @@ import com.mozilla.bagheera.util.S3Loader;
 public class S3BatchSink extends BaseSink {
     private static final Logger LOG = Logger.getLogger(S3BatchSink.class);
     private long batchSize = 500000000l;
+    private final int numParallelLoaders = 1;
     private long currentBatch = 0l;
     private OutputStream outputStream = null;
     private final boolean compress;
@@ -52,8 +55,8 @@ public class S3BatchSink extends BaseSink {
     private final Lock lock = new ReentrantLock();
     // We probably don't want more than 50 files queued up at once...
     private final BlockingQueue<String> s3queue = new ArrayBlockingQueue<String>(50);
-    private final S3Loader loader;
-    private final Thread loaderThread;
+    private final List<S3Loader> loaders;
+    private final List<Thread> loaderThreads;
 
     StringBuilder builder = new StringBuilder(1024);
 
@@ -71,9 +74,15 @@ public class S3BatchSink extends BaseSink {
         this.bucket = s3Bucket;
         this.outputStream = new BufferedOutputStream(new FileOutputStream(new File(getLogFilename())));
         TransferManager manager = S3Loader.getManager();
-        loader = new S3Loader(s3queue, manager, this.bucket);
-        loaderThread = new Thread(loader);
-        loaderThread.start();
+        loaders = new ArrayList<S3Loader>();
+        loaderThreads = new ArrayList<Thread>();
+        for (int i = 0; i < numParallelLoaders; i++) {
+            S3Loader loader = new S3Loader(s3queue, manager, this.bucket);
+            Thread loaderThread = new Thread(loader);
+            loaderThread.start();
+            loaders.add(loader);
+            loaderThreads.add(loaderThread);
+        }
     }
 
     public String getLogFilename() {
@@ -83,7 +92,7 @@ public class S3BatchSink extends BaseSink {
     public long serialize(BagheeraMessage message, byte[] dataOverride) throws IOException {
         // If the current file is full, rotate and upload it.
         if (currentBatch > batchSize) {
-            LOG.info("Waiting for lock to rotate...");
+            LOG.info("Waiting for lock so we can safely rotate the current log...");
             lock.lock();
             try {
                 LOG.info("Rotating log after " + currentBatch + " bytes");
@@ -235,15 +244,25 @@ public class S3BatchSink extends BaseSink {
 
     @Override
     public void close() {
+        LOG.debug("Closing S3BatchSink");
         try {
-            outputStream.flush();
-            outputStream.close();
-            // TODO: rotate final file
-            //       add to queue
+//            outputStream.flush();
+//            outputStream.close();
 
-            loader.stop();
-            // Wait for loader to complete.
-            loaderThread.join();
+            if (currentBatch > 0) {
+                String rotatedLogName = rotateLog();
+                LOG.info("Uploading final log file: " + rotatedLogName);
+                s3queue.put(rotatedLogName);
+            } else {
+                LOG.info("Final log file was empty... not rotating");
+            }
+            // Wait for loaders to complete.
+            for (S3Loader loader : loaders) {
+                loader.stop();
+            }
+            for (Thread loaderThread : loaderThreads) {
+                loaderThread.join();
+            }
         } catch (IOException e) {
             e.printStackTrace();
         } catch (InterruptedException e) {
