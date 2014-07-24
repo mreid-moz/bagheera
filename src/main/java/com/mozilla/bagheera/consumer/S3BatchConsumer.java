@@ -46,7 +46,7 @@ public final class S3BatchConsumer extends App {
         Options options = KafkaConsumer.getOptions();
         options.addOption(optFactory.create("b", "bucket", true, "S3 bucket name").required());
         options.addOption(optFactory.create("s", "size", true, "Batch size in bytes"));
-        options.addOption(optFactory.create("p", "path", true, "Path in which to store batched files"));
+        options.addOption(optFactory.create("P", "path", true, "Path in which to store batched files"));
         // TODO: AWS credentials?
         options.addOption(optFactory.create("z", "compress-payloads", true, "Whether or not to gzip payload data"));
 
