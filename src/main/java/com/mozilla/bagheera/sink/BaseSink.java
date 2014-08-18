@@ -39,7 +39,7 @@ public abstract class BaseSink implements Sink, KeyValueSink {
 	@Override
 	public void delete(BagheeraMessage bmsg) throws IOException {
 		// Assume we're only getting valid messages.
-		if (bmsg.getOperation() == Operation.CREATE_UPDATE) {
+		if (bmsg.getOperation() == Operation.DELETE) {
             this.delete(bmsg.getId());
 		}
 	}
