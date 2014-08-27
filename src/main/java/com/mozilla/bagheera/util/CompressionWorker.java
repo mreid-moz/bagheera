@@ -36,6 +36,7 @@ import java.util.zip.GZIPOutputStream;
 import org.apache.log4j.Logger;
 
 import com.mozilla.bagheera.BagheeraProto.BagheeraMessage;
+import com.mozilla.bagheera.BagheeraProto.BagheeraMessage.Operation;
 
 public class CompressionWorker implements Runnable {
     private final BlockingQueue<BagheeraMessage> pendingMessages;
@@ -169,7 +170,12 @@ public class CompressionWorker implements Runnable {
             this.outputStream = new BufferedOutputStream(new FileOutputStream(new File(getLogFilename())));
         }
 
-        byte[] data = message.getPayload().toByteArray();
+        byte[] data;
+        if (message.getOperation() == Operation.DELETE) {
+            data = "DELETE".getBytes();
+        } else {
+            data = message.getPayload().toByteArray();
+        }
 
         if (this.compress) {
             data = compress(data);
