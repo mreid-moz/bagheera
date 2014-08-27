@@ -26,15 +26,24 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.zip.GZIPInputStream;
 
 import org.junit.Test;
+
+import com.mozilla.bagheera.BagheeraProto.BagheeraMessage;
+import com.mozilla.bagheera.util.CompressionWorker;
 
 public class S3BatchSinkTest {
 
     @Test
     public void testWriteRecord() throws IOException{
-        S3BatchSink sink = new S3BatchSink("test", ".", 100l, false);
+
+        BlockingQueue<String> s3 = new ArrayBlockingQueue<String>(50);
+        BlockingQueue<BagheeraMessage> m = new ArrayBlockingQueue<BagheeraMessage>(50);
+
+        CompressionWorker worker = new CompressionWorker(m, 0, 100l, false, ".", s3);
 
         byte[] ip = "123.123.123.123".getBytes();
         byte[] path = "/submit/test".getBytes();
@@ -42,7 +51,7 @@ public class S3BatchSinkTest {
         long timestamp = 1000000l;
 
         ByteArrayOutputStream testOut = new ByteArrayOutputStream(1500);
-        long length = sink.writeRecord(ip, path, data, timestamp, testOut);
+        long length = worker.writeRecord(ip, path, data, timestamp, testOut);
         testOut.close();
         long expectedLength = 16 + ip.length + path.length + data.length;
         assertEquals(expectedLength, length);
@@ -57,7 +66,7 @@ public class S3BatchSinkTest {
             assertEquals(written[16 + ip.length + path.length + i], data[i]);
         }
 
-        sink.close();
+//        sink.close();
     }
 
     @Test
@@ -67,7 +76,12 @@ public class S3BatchSinkTest {
 
     @Test
     public void testWriteRecordCompressed() throws IOException{
-        S3BatchSink sink = new S3BatchSink("test", ".", 100l, true);
+//        S3BatchSink sink = new S3BatchSink("test", ".", 100l, true);
+
+        BlockingQueue<String> s3 = new ArrayBlockingQueue<String>(50);
+        BlockingQueue<BagheeraMessage> m = new ArrayBlockingQueue<BagheeraMessage>(50);
+
+        CompressionWorker worker = new CompressionWorker(m, 0, 100l, true, ".", s3);
 
         byte[] ip = "123.123.123.123".getBytes();
         byte[] path = "/submit/test".getBytes();
@@ -85,7 +99,7 @@ public class S3BatchSinkTest {
         long timestamp = 1000000l;
 
         ByteArrayOutputStream testOut = new ByteArrayOutputStream(50000);
-        long length = sink.writeRecord(ip, path, sink.compress(data), timestamp, testOut);
+        long length = worker.writeRecord(ip, path, worker.compress(data), timestamp, testOut);
         testOut.close();
         int expectedLength = 16 + ip.length + path.length + data.length;
 
@@ -127,6 +141,6 @@ public class S3BatchSinkTest {
             assertEquals(uncompressed[i], data[i]);
         }
 
-        sink.close();
+//        sink.close();
     }
 }
