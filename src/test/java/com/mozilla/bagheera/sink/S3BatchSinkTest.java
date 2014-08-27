@@ -85,7 +85,7 @@ public class S3BatchSinkTest {
         long timestamp = 1000000l;
 
         ByteArrayOutputStream testOut = new ByteArrayOutputStream(50000);
-        long length = sink.writeRecord(ip, path, data, timestamp, testOut);
+        long length = sink.writeRecord(ip, path, sink.compress(data), timestamp, testOut);
         testOut.close();
         int expectedLength = 16 + ip.length + path.length + data.length;
 

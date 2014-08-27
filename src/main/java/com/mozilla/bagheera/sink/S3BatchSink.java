@@ -38,7 +38,6 @@ import java.util.zip.GZIPOutputStream;
 
 import org.apache.log4j.Logger;
 
-import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.mozilla.bagheera.BagheeraProto.BagheeraMessage;
 import com.mozilla.bagheera.util.S3Loader;
@@ -128,6 +127,10 @@ public class S3BatchSink extends BaseSink {
     		data = message.getPayload().toByteArray();
     	}
 
+        if (this.compress) {
+            data = compress(data);
+        }
+
     	builder.setLength(0);
         builder.append("/submit/");
         builder.append(message.getNamespace());
@@ -152,6 +155,19 @@ public class S3BatchSink extends BaseSink {
         }
         currentBatch += currentRecordLength;
         return currentRecordLength;
+    }
+
+    public byte[] compress(byte[] data) throws IOException {
+        ByteArrayOutputStream gzBytes = new ByteArrayOutputStream(data.length);
+        try {
+            GZIPOutputStream gzStream = new GZIPOutputStream(gzBytes);
+            gzStream.write(data);
+            gzStream.close();
+        } finally {
+            gzBytes.close();
+        }
+        data = gzBytes.toByteArray();
+        return data;
     }
 
     public String rotateLog() throws IOException {
@@ -188,17 +204,6 @@ public class S3BatchSink extends BaseSink {
     }
 
     public long writeRecord(byte[] ip, byte[] path, byte[] data, long timestamp, OutputStream outputStream) throws IOException {
-        if (this.compress) {
-            ByteArrayOutputStream gzBytes = new ByteArrayOutputStream(data.length);
-            try {
-                GZIPOutputStream gzStream = new GZIPOutputStream(gzBytes);
-                gzStream.write(data);
-                gzStream.close();
-            } finally {
-                gzBytes.close();
-            }
-            data = gzBytes.toByteArray();
-        }
     	// write out:
 	    // Write record separator
 	    writeUInt8(0x1e, outputStream);
